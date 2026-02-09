@@ -1,50 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { 
-  FaWhatsapp, 
-  FaPrint, 
-  FaFilePdf, 
-  FaUser, 
-  FaRupeeSign, 
-  FaDownload, 
+import {
+  FaWhatsapp,
+  FaPrint,
+  FaFilePdf,
+  FaUser,
+  FaRupeeSign,
+  FaDownload,
   FaCalendarAlt,
-  FaCheck,  
+  FaCheck,
   FaExclamationTriangle,
   FaClock,
   FaCopy,
   FaMoneyBillAlt,
-  FaCalendarDay
+  FaCalendarDay,
 } from 'react-icons/fa';
 
 // Import academy config
-import { getAcademyConfig } from "../config/academyConfig";
+import { getAcademyConfig } from '../config/academyConfig';
 
 // Helper function to normalize extra fees
 const normalizeExtraFees = (fees) => {
   if (!fees || !Array.isArray(fees)) return [];
-  
-  return fees.map(fee => {
+
+  return fees.map((fee) => {
     if (typeof fee === 'string') {
       return {
         id: Date.now() + Math.random(),
         name: fee,
         amount: 0,
         paid: 0,
-        due: 0
+        due: 0,
       };
     }
-    
+
     const amount = Number(fee.amount) || 0;
     const paid = Number(fee.paid) || 0;
     const due = Math.max(0, amount - paid);
-    
+
     return {
       id: fee.id || Date.now() + Math.random(),
-      name: fee.name || fee.feeName || "Extra Fee",
+      name: fee.name || fee.feeName || 'Extra Fee',
       amount: amount,
       paid: paid,
-      due: due
+      due: due,
     };
   });
 };
@@ -52,60 +52,64 @@ const normalizeExtraFees = (fees) => {
 // Helper function to calculate overdue months
 const calculateOverdueMonths = (admissionDate, installmentMonth) => {
   if (!admissionDate) return { overdue: false, overdueMonths: 0 };
-  
+
   const today = new Date();
   const admission = new Date(admissionDate);
-  
+
   const expectedDueDate = new Date(admission);
   expectedDueDate.setMonth(admission.getMonth() + installmentMonth);
   expectedDueDate.setDate(10);
-  
-  const monthsOverdue = (today.getFullYear() - expectedDueDate.getFullYear()) * 12 + 
-                       (today.getMonth() - expectedDueDate.getMonth());
-  
+
+  const monthsOverdue =
+    (today.getFullYear() - expectedDueDate.getFullYear()) * 12 +
+    (today.getMonth() - expectedDueDate.getMonth());
+
   const overdue = monthsOverdue > 0;
-  
+
   return {
     overdue: overdue,
     overdueMonths: Math.max(0, monthsOverdue),
-    expectedDueDate: expectedDueDate
+    expectedDueDate: expectedDueDate,
   };
 };
 
 // Function to generate installments
 const generateInstallments = (student, allFees = []) => {
   if (!student) return [];
-  
+
   const months = Number(student.installmentMonths) || 1;
   const tuitionFee = Number(student.courseFee) || Number(student.tuitionFee) || 0;
   const monthly = Math.ceil(tuitionFee / months);
-  
+
   const today = new Date();
-  const admissionDate = student.admissionDate ? new Date(student.admissionDate) : 
-                       student.admission_date ? new Date(student.admission_date) : today;
-  
+  const admissionDate = student.admissionDate
+    ? new Date(student.admissionDate)
+    : student.admission_date
+      ? new Date(student.admission_date)
+      : today;
+
   const installments = [];
-  
-  const studentTuitionPayments = allFees.filter(fee => 
-    fee.studentId === student.studentId && fee.type === 'tuition'
+
+  const studentTuitionPayments = allFees.filter(
+    (fee) => fee.studentId === student.studentId && fee.type === 'tuition',
   );
-  
+
   for (let i = 1; i <= months; i++) {
     const dueDate = new Date(admissionDate);
     dueDate.setMonth(admissionDate.getMonth() + i);
-    
+
     let installmentAmount = monthly;
     if (i === months) {
-      installmentAmount = tuitionFee - (monthly * (months - 1));
+      installmentAmount = tuitionFee - monthly * (months - 1);
     }
-    
-    const monthPayments = studentTuitionPayments.filter(p => p.month === i);
+
+    const monthPayments = studentTuitionPayments.filter((p) => p.month === i);
     const paidAmount = monthPayments.reduce((sum, p) => sum + p.amount, 0);
-    
+
     const dueAmount = Math.max(0, installmentAmount - paidAmount);
-    
+
     const overdueInfo = calculateOverdueMonths(admissionDate, i);
-    
+
     let status = 'pending';
     if (dueAmount === 0) {
       status = 'paid';
@@ -114,10 +118,10 @@ const generateInstallments = (student, allFees = []) => {
     } else if (overdueInfo.overdue) {
       status = 'overdue';
     }
-    
+
     const monthName = dueDate.toLocaleString('en-US', { month: 'short' }).toUpperCase();
     const year = dueDate.getFullYear();
-    
+
     installments.push({
       month: i,
       monthName: monthName,
@@ -131,18 +135,18 @@ const generateInstallments = (student, allFees = []) => {
       overdueMonths: overdueInfo.overdueMonths,
       expectedDueDate: overdueInfo.expectedDueDate,
       originalDue: installmentAmount,
-      displayName: `${monthName} ${year}`
+      displayName: `${monthName} ${year}`,
     });
   }
-  
+
   installments.sort((a, b) => a.month - b.month);
-  
+
   return installments;
 };
 
 // Helper function to format slip date
 const formatSlipDate = (dateString) => {
-  if (!dateString) return "__/__/____";
+  if (!dateString) return '__/__/____';
   try {
     const date = new Date(dateString);
     const day = String(date.getDate()).padStart(2, '0');
@@ -150,18 +154,18 @@ const formatSlipDate = (dateString) => {
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   } catch (e) {
-    return "__/__/____";
+    return '__/__/____';
   }
 };
 
 const Slip = ({ students = [] }) => {
   const activeStudents = React.useMemo(() => {
     if (!Array.isArray(students)) return [];
-    
-    return students.filter(student => {
+
+    return students.filter((student) => {
       if (!student) return false;
-      
-      const isActive = 
+
+      const isActive =
         student.active === true ||
         student.active === 'true' ||
         student.status === 'active' ||
@@ -170,11 +174,11 @@ const Slip = ({ students = [] }) => {
         (student.status && student.status.toLowerCase().includes('active')) ||
         !student.status ||
         (!student.active && !student.status && !student.isActive);
-      
+
       return isActive;
     });
   }, [students]);
-  
+
   const [loading, setLoading] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -186,32 +190,32 @@ const Slip = ({ students = [] }) => {
   const [payments, setPayments] = useState([]);
   const [installments, setInstallments] = useState([]);
   const [copiedStudentId, setCopiedStudentId] = useState(null);
-  
+
   const [academyConfig, setAcademyConfig] = useState(getAcademyConfig());
 
   const formatCurrency = (value) => {
     const numValue = Number(value || 0);
     return `${numValue.toLocaleString('en-IN', {
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     })}`;
   };
-  
+
   // Format admission date for display
   const formatAdmissionDate = (dateString) => {
-    if (!dateString) return "Not Available";
+    if (!dateString) return 'Not Available';
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'short',
-        year: 'numeric'
+        year: 'numeric',
       });
     } catch (e) {
-      return "Invalid Date";
+      return 'Invalid Date';
     }
   };
-  
+
   useEffect(() => {
     const config = getAcademyConfig();
     setAcademyConfig(config);
@@ -221,11 +225,11 @@ const Slip = ({ students = [] }) => {
     if (currentStudent) {
       const allFees = JSON.parse(localStorage.getItem('studentFees') || '[]');
       const studentPayments = allFees
-        .filter(fee => fee.studentId === currentStudent.studentId)
+        .filter((fee) => fee.studentId === currentStudent.studentId)
         .sort((a, b) => new Date(b.date) - new Date(a.date));
-      
+
       setPayments(studentPayments);
-      
+
       const generatedInstallments = generateInstallments(currentStudent, allFees);
       setInstallments(generatedInstallments);
     }
@@ -239,41 +243,59 @@ const Slip = ({ students = [] }) => {
 
   const generateSlipData = (student) => {
     if (!student) return {};
-    
+
     const allFees = JSON.parse(localStorage.getItem('studentFees') || '[]');
     const installments = generateInstallments(student, allFees);
-    
+
     const now = new Date();
     const issueDate = formatSlipDate(now);
     const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-    
+
     const tuitionFee = Number(student.courseFee) || Number(student.tuitionFee) || 0;
-    const tuitionPaid = installments.reduce((sum, inst) => sum + inst.paid, 0);
-    const tuitionDue = Math.max(0, tuitionFee - tuitionPaid);
-    
+    const tuitionPaidFromInstallments = installments.reduce((sum, inst) => sum + inst.paid, 0);
+
     const extraFees = normalizeExtraFees(student.selectedExtraFees || []);
     const extraFeesTotal = extraFees.reduce((sum, fee) => sum + (Number(fee.amount) || 0), 0);
     const extraFeesPaid = extraFees.reduce((sum, fee) => sum + (Number(fee.paid) || 0), 0);
     const extraFeesDue = extraFees.reduce((sum, fee) => sum + (Number(fee.due) || 0), 0);
-    
-    const totalFee = Number(student.totalFee) || (tuitionFee + extraFeesTotal);
-    const totalPaid = Number(student.feePaid) || (tuitionPaid + extraFeesPaid);
+
+    const totalFee = Number(student.totalFee) || tuitionFee + extraFeesTotal;
+
+    // Calculate total paid using multiple sources for accuracy:
+    // 1. student.feePaid - stored on student object (updated by CollectFees and NewAdmission)
+    // 2. installment payments from studentFees + extra fees paid
+    // Use the maximum of stored value or calculated value to ensure accuracy
+    const storedFeePaid = Number(student.feePaid) || 0;
+    const calculatedPaid = tuitionPaidFromInstallments + extraFeesPaid;
+
+    // Use stored value if it exists and is greater, otherwise use calculated value
+    // This handles both initial admission payments (only in student.feePaid) and
+    // subsequent payments (in both student.feePaid and studentFees)
+    const totalPaid = Math.max(storedFeePaid, calculatedPaid);
+
+    // Recalculate tuitionPaid based on the difference if stored is higher
+    const tuitionPaid =
+      storedFeePaid > calculatedPaid
+        ? Math.max(storedFeePaid - extraFeesPaid, tuitionPaidFromInstallments)
+        : tuitionPaidFromInstallments;
+    const tuitionDue = Math.max(0, tuitionFee - tuitionPaid);
+
     const totalDue = Math.max(0, totalFee - totalPaid);
-    
-    const paidInstallments = installments.filter(inst => inst.status === 'paid');
-    const overdueInstallments = installments.filter(inst => inst.status === 'overdue');
-    const partialInstallments = installments.filter(inst => inst.status === 'partial');
-    const pendingInstallments = installments.filter(inst => inst.status === 'pending');
-    
+
+    const paidInstallments = installments.filter((inst) => inst.status === 'paid');
+    const overdueInstallments = installments.filter((inst) => inst.status === 'overdue');
+    const partialInstallments = installments.filter((inst) => inst.status === 'partial');
+    const pendingInstallments = installments.filter((inst) => inst.status === 'pending');
+
     // Calculate extra fee stats
-    const paidExtraFees = extraFees.filter(fee => fee.due === 0);
-    const dueExtraFees = extraFees.filter(fee => fee.due > 0);
-    
+    const paidExtraFees = extraFees.filter((fee) => fee.due === 0);
+    const dueExtraFees = extraFees.filter((fee) => fee.due > 0);
+
     const latestPayment = payments.length > 0 ? payments[0] : null;
-    
+
     // Get admission date from student data
     const admissionDate = student.admissionDate || student.admission_date || student.admission;
-    
+
     return {
       studentName: student.name || 'Student',
       fatherName: student.fatherName || student.father_name || student.parent_name || 'N/A',
@@ -300,16 +322,17 @@ const Slip = ({ students = [] }) => {
       totalDue: totalDue,
       issueDate: issueDate,
       time: time,
-      academyName: academyConfig.name || "ACADEMY",
-      academyAddress: academyConfig.contact?.address || "Address",
-      academyPhone: academyConfig.contact?.phone || "Phone",
-      academyLogo: academyConfig.logo || "💻",
-      logoType: academyConfig.logoType || "emoji",
+      academyName: academyConfig.name || 'ACADEMY',
+      academyAddress: academyConfig.contact?.address || 'Address',
+      academyPhone: academyConfig.contact?.phone || 'Phone',
+      academyLogo: academyConfig.logo || '💻',
+      logoType: academyConfig.logoType || 'emoji',
       showLogo: academyConfig.showLogo !== false,
-      currency: academyConfig.fees?.currencySymbol || "RS",
+      currency: academyConfig.fees?.currencySymbol || 'RS',
       latestPayment: latestPayment,
       paymentMethod: latestPayment?.method || 'cash',
-      transactionId: latestPayment?.transactionId || 'TXN' + new Date().getTime().toString().slice(-8)
+      transactionId:
+        latestPayment?.transactionId || 'TXN' + new Date().getTime().toString().slice(-8),
     };
   };
 
@@ -375,13 +398,19 @@ const Slip = ({ students = [] }) => {
             gap: 1.2mm;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
           ">
-            ${slipData.logoType === 'emoji' ? `
+            ${
+              slipData.logoType === 'emoji'
+                ? `
               <div style="font-size: 10px; background: white; border-radius: 50%; width: 6mm; height: 6mm; display: flex; align-items: center; justify-content: center; color: #09c288; border: 0.5px solid #ddd;">${slipData.academyLogo}</div>
-            ` : slipData.logoType === 'image' ? `
+            `
+                : slipData.logoType === 'image'
+                  ? `
               <img src="${slipData.academyLogo}" style="height: 5mm; width: auto; border-radius: 2px; border: 0.5px solid rgba(255,255,255,0.5);" alt="Logo" />
-            ` : `
+            `
+                  : `
               <div style="font-size: 10px; background: white; border-radius: 50%; width: 6mm; height: 6mm; display: flex; align-items: center; justify-content: center; color: #09c288; border: 0.5px solid #ddd;">🏫</div>
-            `}
+            `
+            }
             <div style="flex: 1; text-align: center;">
               <div style="font-size: 8.5px; font-weight: bold; letter-spacing: 0.2px;">${slipData.academyName}</div>
               <div style="font-size: 5px; opacity: 0.9;">${slipData.academyAddress}</div>
@@ -423,57 +452,79 @@ const Slip = ({ students = [] }) => {
             <div style="font-size: 7px; font-weight: bold; text-align: center; margin-bottom: 0.8mm; border-bottom: 0.5px solid #ccc; padding-bottom: 0.6mm; color: #09c288;">
               FEE SUMMARY
             </div>
-            
+
             <!-- First: Show installments months with fees -->
-            ${slipData.installments.slice(0, 3).map(inst => `
+            ${slipData.installments
+              .slice(0, 3)
+              .map(
+                (inst) => `
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.4mm; padding: 0.2mm 0;">
                 <div>${inst.monthName} ${inst.year}:</div>
                 <div style="font-weight: bold; color: ${inst.due === 0 ? '#1b5e20' : '#333'};">${slipData.currency} ${formatCurrency(inst.amount)}</div>
               </div>
-            `).join('')}
-            
-            ${slipData.installments.length > 3 ? `
+            `,
+              )
+              .join('')}
+
+            ${
+              slipData.installments.length > 3
+                ? `
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.4mm; padding: 0.2mm 0; color: #666; font-size: 6px;">
                 <div>+ ${slipData.installments.length - 3} more months:</div>
                 <div style="font-weight: bold;">${slipData.currency} ${formatCurrency(slipData.tuitionFee - slipData.installments.slice(0, 3).reduce((sum, inst) => sum + inst.amount, 0))}</div>
               </div>
-            ` : ''}
-            
+            `
+                : ''
+            }
+
             <!-- Second: Show Extra Fees -->
-            ${slipData.extraFeesTotal > 0 ? `
+            ${
+              slipData.extraFeesTotal > 0
+                ? `
               <div style="border-top: 0.5px dashed #ccc; margin: 0.5mm 0; padding-top: 0.5mm;">
-                ${slipData.extraFees.slice(0, 2).map(fee => `
+                ${slipData.extraFees
+                  .slice(0, 2)
+                  .map(
+                    (fee) => `
                   <div style="display: flex; justify-content: space-between; margin-bottom: 0.3mm; padding: 0.1mm 0; font-size: 6.2px;">
                     <div>${fee.name}:</div>
                     <div style="font-weight: bold; color: #7b1fa2;">${slipData.currency} ${formatCurrency(fee.amount)}</div>
                   </div>
-                `).join('')}
-                
-                ${slipData.extraFees.length > 2 ? `
+                `,
+                  )
+                  .join('')}
+
+                ${
+                  slipData.extraFees.length > 2
+                    ? `
                   <div style="display: flex; justify-content: space-between; margin-bottom: 0.3mm; padding: 0.1mm 0; color: #666; font-size: 5.8px;">
                     <div>+ ${slipData.extraFees.length - 2} more fees:</div>
                     <div style="font-weight: bold;">${slipData.currency} ${formatCurrency(slipData.extraFeesTotal - slipData.extraFees.slice(0, 2).reduce((sum, fee) => sum + fee.amount, 0))}</div>
                   </div>
-                ` : ''}
-                
+                `
+                    : ''
+                }
+
                 <div style="display: flex; justify-content: space-between; margin-top: 0.3mm; padding-top: 0.3mm; border-top: 0.5px dotted #ccc; font-weight: bold;">
                   <div>Total Extra Fees:</div>
                   <div style="color: #7b1fa2;">${slipData.currency} ${formatCurrency(slipData.extraFeesTotal)}</div>
                 </div>
               </div>
-            ` : ''}
-            
+            `
+                : ''
+            }
+
             <!-- Third: Show Total Amount -->
             <div style="
-              display: flex; 
-              justify-content: space-between; 
-              font-weight: bold; 
-              padding: 0.6mm 0; 
-              border-top: 0.5px solid #ccc; 
-              background: #e8f5e8; 
-              margin: 0 -1mm; 
-              padding-left: 1mm; 
-              padding-right: 1mm; 
+              display: flex;
+              justify-content: space-between;
+              font-weight: bold;
+              padding: 0.6mm 0;
+              border-top: 0.5px solid #ccc;
+              background: #e8f5e8;
+              margin: 0 -1mm;
+              padding-left: 1mm;
+              padding-right: 1mm;
               margin-top: 0.6mm;
               font-size: 7px;
             ">
@@ -482,18 +533,18 @@ const Slip = ({ students = [] }) => {
                 ${slipData.currency} ${formatCurrency(slipData.totalFee)}
               </div>
             </div>
-            
+
             <!-- Fourth: Show Total Paid -->
             <div style="
-              display: flex; 
-              justify-content: space-between; 
-              font-weight: bold; 
-              padding: 0.6mm 0; 
-              border-top: 0.5px solid #ccc; 
-              background: #fff3cd; 
-              margin: 0 -1mm; 
-              padding-left: 1mm; 
-              padding-right: 1mm; 
+              display: flex;
+              justify-content: space-between;
+              font-weight: bold;
+              padding: 0.6mm 0;
+              border-top: 0.5px solid #ccc;
+              background: #fff3cd;
+              margin: 0 -1mm;
+              padding-left: 1mm;
+              padding-right: 1mm;
               margin-top: 0.2mm;
               font-size: 6.8px;
             ">
@@ -520,7 +571,7 @@ const Slip = ({ students = [] }) => {
             <div style="font-size: 7px; font-weight: bold; text-align: center; margin-bottom: 0.6mm; border-bottom: 0.5px solid #ccc; padding-bottom: 0.5mm; color: #09c288;">
               INSTALLMENT STATUS (${slipData.installments.length})
             </div>
-            
+
             <!-- Installment Stats - Compact -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.8mm; padding: 0.5mm 0; border-bottom: 0.5px dashed #ccc; background: linear-gradient(to right, #e8f5e8, #fff3cd, #ffebee); border-radius: 0.5mm; padding-left: 0.8mm; padding-right: 0.8mm;">
               <div style="text-align: center; flex: 1;">
@@ -536,35 +587,37 @@ const Slip = ({ students = [] }) => {
                 <div style="font-size: 4.5px; color: #666;">PENDING</div>
               </div>
             </div>
-            
+
             <!-- Installment List - Compact -->
             <div style="max-height: 14mm; overflow-y: auto; padding-right: 0.6mm; font-size: 6px;">
-              ${slipData.installments.slice(0, 2).map(inst => {
-                let statusColor, statusIcon, bgColor;
-                if (inst.status === 'paid') {
-                  statusColor = '#1b5e20';
-                  statusIcon = '✓';
-                  bgColor = '#e8f5e8';
-                } else if (inst.status === 'overdue') {
-                  statusColor = '#c62828';
-                  statusIcon = '⚠';
-                  bgColor = '#ffebee';
-                } else if (inst.status === 'partial') {
-                  statusColor = '#f57c00';
-                  statusIcon = '⏳';
-                  bgColor = '#fff3cd';
-                } else {
-                  statusColor = '#666';
-                  statusIcon = '•';
-                  bgColor = '#f5f5f5';
-                }
-                
-                return `
+              ${slipData.installments
+                .slice(0, 2)
+                .map((inst) => {
+                  let statusColor, statusIcon, bgColor;
+                  if (inst.status === 'paid') {
+                    statusColor = '#1b5e20';
+                    statusIcon = '✓';
+                    bgColor = '#e8f5e8';
+                  } else if (inst.status === 'overdue') {
+                    statusColor = '#c62828';
+                    statusIcon = '⚠';
+                    bgColor = '#ffebee';
+                  } else if (inst.status === 'partial') {
+                    statusColor = '#f57c00';
+                    statusIcon = '⏳';
+                    bgColor = '#fff3cd';
+                  } else {
+                    statusColor = '#666';
+                    statusIcon = '•';
+                    bgColor = '#f5f5f5';
+                  }
+
+                  return `
                 <div style="
-                  display: flex; 
-                  justify-content: space-between; 
-                  margin-bottom: 0.4mm; 
-                  font-size: 6px; 
+                  display: flex;
+                  justify-content: space-between;
+                  margin-bottom: 0.4mm;
+                  font-size: 6px;
                   align-items: center;
                   padding: 0.5mm;
                   background: ${bgColor};
@@ -582,20 +635,25 @@ const Slip = ({ students = [] }) => {
                   </div>
                 </div>
                 `;
-              }).join('')}
-              ${slipData.installments.length > 2 ? `
+                })
+                .join('')}
+              ${
+                slipData.installments.length > 2
+                  ? `
                 <div style="
-                  text-align: center; 
-                  font-size: 5px; 
-                  color: #666; 
-                  padding: 0.3mm; 
-                  background: #e3f2fd; 
+                  text-align: center;
+                  font-size: 5px;
+                  color: #666;
+                  padding: 0.3mm;
+                  background: #e3f2fd;
                   border-radius: 0.3mm;
                   margin-top: 0.3mm;
                 ">
                   +${slipData.installments.length - 2} more installments
                 </div>
-              ` : ''}
+              `
+                  : ''
+              }
             </div>
           </div>
 
@@ -618,7 +676,7 @@ const Slip = ({ students = [] }) => {
               Note: Monthly fee must be paid by 10th - Late fee Rs.200 from 10-15 - Double late fee after 15th.
             </div>
           </div>
-          
+
           <!-- Footer - Compact -->
           <div style="
             text-align: center;
@@ -675,13 +733,19 @@ const Slip = ({ students = [] }) => {
             gap: 1.2mm;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
           ">
-            ${slipData.logoType === 'emoji' ? `
+            ${
+              slipData.logoType === 'emoji'
+                ? `
               <div style="font-size: 10px; background: white; border-radius: 50%; width: 6mm; height: 6mm; display: flex; align-items: center; justify-content: center; color: #2196F3; border: 0.5px solid #ddd;">${slipData.academyLogo}</div>
-            ` : slipData.logoType === 'image' ? `
+            `
+                : slipData.logoType === 'image'
+                  ? `
               <img src="${slipData.academyLogo}" style="height: 5mm; width: auto; border-radius: 2px; border: 0.5px solid rgba(255,255,255,0.5);" alt="Logo" />
-            ` : `
+            `
+                  : `
               <div style="font-size: 10px; background: white; border-radius: 50%; width: 6mm; height: 6mm; display: flex; align-items: center; justify-content: center; color: #2196F3; border: 0.5px solid #ddd;">🏫</div>
-            `}
+            `
+            }
             <div style="flex: 1; text-align: center;">
               <div style="font-size: 8.5px; font-weight: bold; letter-spacing: 0.2px;">${slipData.academyName}</div>
               <div style="font-size: 5px; opacity: 0.9;">${slipData.academyAddress}</div>
@@ -723,57 +787,79 @@ const Slip = ({ students = [] }) => {
             <div style="font-size: 7px; font-weight: bold; text-align: center; margin-bottom: 0.8mm; border-bottom: 0.5px solid #ccc; padding-bottom: 0.6mm; color: #2196F3;">
               FEE SUMMARY
             </div>
-            
+
             <!-- First: Show installments months with fees -->
-            ${slipData.installments.slice(0, 3).map(inst => `
+            ${slipData.installments
+              .slice(0, 3)
+              .map(
+                (inst) => `
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.4mm; padding: 0.2mm 0;">
                 <div>${inst.monthName} ${inst.year}:</div>
                 <div style="font-weight: bold; color: ${inst.due === 0 ? '#1b5e20' : '#333'};">${slipData.currency} ${formatCurrency(inst.amount)}</div>
               </div>
-            `).join('')}
-            
-            ${slipData.installments.length > 3 ? `
+            `,
+              )
+              .join('')}
+
+            ${
+              slipData.installments.length > 3
+                ? `
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.4mm; padding: 0.2mm 0; color: #666; font-size: 6px;">
                 <div>+ ${slipData.installments.length - 3} more months:</div>
                 <div style="font-weight: bold;">${slipData.currency} ${formatCurrency(slipData.tuitionFee - slipData.installments.slice(0, 3).reduce((sum, inst) => sum + inst.amount, 0))}</div>
               </div>
-            ` : ''}
-            
+            `
+                : ''
+            }
+
             <!-- Second: Show Extra Fees -->
-            ${slipData.extraFeesTotal > 0 ? `
+            ${
+              slipData.extraFeesTotal > 0
+                ? `
               <div style="border-top: 0.5px dashed #ccc; margin: 0.5mm 0; padding-top: 0.5mm;">
-                ${slipData.extraFees.slice(0, 2).map(fee => `
+                ${slipData.extraFees
+                  .slice(0, 2)
+                  .map(
+                    (fee) => `
                   <div style="display: flex; justify-content: space-between; margin-bottom: 0.3mm; padding: 0.1mm 0; font-size: 6.2px;">
                     <div>${fee.name}:</div>
                     <div style="font-weight: bold; color: #7b1fa2;">${slipData.currency} ${formatCurrency(fee.amount)}</div>
                   </div>
-                `).join('')}
-                
-                ${slipData.extraFees.length > 2 ? `
+                `,
+                  )
+                  .join('')}
+
+                ${
+                  slipData.extraFees.length > 2
+                    ? `
                   <div style="display: flex; justify-content: space-between; margin-bottom: 0.3mm; padding: 0.1mm 0; color: #666; font-size: 5.8px;">
                     <div>+ ${slipData.extraFees.length - 2} more fees:</div>
                     <div style="font-weight: bold;">${slipData.currency} ${formatCurrency(slipData.extraFeesTotal - slipData.extraFees.slice(0, 2).reduce((sum, fee) => sum + fee.amount, 0))}</div>
                   </div>
-                ` : ''}
-                
+                `
+                    : ''
+                }
+
                 <div style="display: flex; justify-content: space-between; margin-top: 0.3mm; padding-top: 0.3mm; border-top: 0.5px dotted #ccc; font-weight: bold;">
                   <div>Total Extra Fees:</div>
                   <div style="color: #7b1fa2;">${slipData.currency} ${formatCurrency(slipData.extraFeesTotal)}</div>
                 </div>
               </div>
-            ` : ''}
-            
+            `
+                : ''
+            }
+
             <!-- Third: Show Total Amount -->
             <div style="
-              display: flex; 
-              justify-content: space-between; 
-              font-weight: bold; 
-              padding: 0.6mm 0; 
-              border-top: 0.5px solid #ccc; 
-              background: #e8f5e8; 
-              margin: 0 -1mm; 
-              padding-left: 1mm; 
-              padding-right: 1mm; 
+              display: flex;
+              justify-content: space-between;
+              font-weight: bold;
+              padding: 0.6mm 0;
+              border-top: 0.5px solid #ccc;
+              background: #e8f5e8;
+              margin: 0 -1mm;
+              padding-left: 1mm;
+              padding-right: 1mm;
               margin-top: 0.6mm;
               font-size: 7px;
             ">
@@ -782,18 +868,18 @@ const Slip = ({ students = [] }) => {
                 ${slipData.currency} ${formatCurrency(slipData.totalFee)}
               </div>
             </div>
-            
+
             <!-- Fourth: Show Total Paid -->
             <div style="
-              display: flex; 
-              justify-content: space-between; 
-              font-weight: bold; 
-              padding: 0.6mm 0; 
-              border-top: 0.5px solid #ccc; 
-              background: #fff3cd; 
-              margin: 0 -1mm; 
-              padding-left: 1mm; 
-              padding-right: 1mm; 
+              display: flex;
+              justify-content: space-between;
+              font-weight: bold;
+              padding: 0.6mm 0;
+              border-top: 0.5px solid #ccc;
+              background: #fff3cd;
+              margin: 0 -1mm;
+              padding-left: 1mm;
+              padding-right: 1mm;
               margin-top: 0.2mm;
               font-size: 6.8px;
             ">
@@ -820,7 +906,7 @@ const Slip = ({ students = [] }) => {
             <div style="font-size: 7px; font-weight: bold; text-align: center; margin-bottom: 0.6mm; border-bottom: 0.5px solid #ccc; padding-bottom: 0.5mm; color: #2196F3;">
               INSTALLMENT STATUS (${slipData.installments.length})
             </div>
-            
+
             <!-- Installment Stats -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.8mm; padding: 0.5mm 0; border-bottom: 0.5px dashed #ccc; background: linear-gradient(to right, #e8f5e8, #fff3cd, #ffebee); border-radius: 0.5mm; padding-left: 0.8mm; padding-right: 0.8mm;">
               <div style="text-align: center; flex: 1;">
@@ -836,35 +922,37 @@ const Slip = ({ students = [] }) => {
                 <div style="font-size: 4.5px; color: #666;">PENDING</div>
               </div>
             </div>
-            
+
             <!-- Installment List -->
             <div style="max-height: 14mm; overflow-y: auto; padding-right: 0.6mm; font-size: 6px;">
-              ${slipData.installments.slice(0, 2).map(inst => {
-                let statusColor, statusIcon, bgColor;
-                if (inst.status === 'paid') {
-                  statusColor = '#1b5e20';
-                  statusIcon = '✓';
-                  bgColor = '#e8f5e8';
-                } else if (inst.status === 'overdue') {
-                  statusColor = '#c62828';
-                  statusIcon = '⚠';
-                  bgColor = '#ffebee';
-                } else if (inst.status === 'partial') {
-                  statusColor = '#f57c00';
-                  statusIcon = '⏳';
-                  bgColor = '#fff3cd';
-                } else {
-                  statusColor = '#666';
-                  statusIcon = '•';
-                  bgColor = '#f5f5f5';
-                }
-                
-                return `
+              ${slipData.installments
+                .slice(0, 2)
+                .map((inst) => {
+                  let statusColor, statusIcon, bgColor;
+                  if (inst.status === 'paid') {
+                    statusColor = '#1b5e20';
+                    statusIcon = '✓';
+                    bgColor = '#e8f5e8';
+                  } else if (inst.status === 'overdue') {
+                    statusColor = '#c62828';
+                    statusIcon = '⚠';
+                    bgColor = '#ffebee';
+                  } else if (inst.status === 'partial') {
+                    statusColor = '#f57c00';
+                    statusIcon = '⏳';
+                    bgColor = '#fff3cd';
+                  } else {
+                    statusColor = '#666';
+                    statusIcon = '•';
+                    bgColor = '#f5f5f5';
+                  }
+
+                  return `
                 <div style="
-                  display: flex; 
-                  justify-content: space-between; 
-                  margin-bottom: 0.4mm; 
-                  font-size: 6px; 
+                  display: flex;
+                  justify-content: space-between;
+                  margin-bottom: 0.4mm;
+                  font-size: 6px;
                   align-items: center;
                   padding: 0.5mm;
                   background: ${bgColor};
@@ -885,20 +973,25 @@ const Slip = ({ students = [] }) => {
                   </div>
                 </div>
                 `;
-              }).join('')}
-              ${slipData.installments.length > 2 ? `
+                })
+                .join('')}
+              ${
+                slipData.installments.length > 2
+                  ? `
                 <div style="
-                  text-align: center; 
-                  font-size: 5px; 
-                  color: #666; 
-                  padding: 0.3mm; 
-                  background: #e3f2fd; 
+                  text-align: center;
+                  font-size: 5px;
+                  color: #666;
+                  padding: 0.3mm;
+                  background: #e3f2fd;
                   border-radius: 0.3mm;
                   margin-top: 0.3mm;
                 ">
                   +${slipData.installments.length - 2} more installments
                 </div>
-              ` : ''}
+              `
+                  : ''
+              }
             </div>
           </div>
 
@@ -917,7 +1010,7 @@ const Slip = ({ students = [] }) => {
           ">
             🏛️ OFFICE COPY - COMPUTER GENERATED
           </div>
-          
+
           <!-- Footer -->
           <div style="
             text-align: center;
@@ -951,10 +1044,10 @@ const Slip = ({ students = [] }) => {
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     `;
-    
+
     container.innerHTML = generateSlipHTML(slipData);
     document.body.appendChild(container);
-    
+
     return container;
   };
 
@@ -962,10 +1055,10 @@ const Slip = ({ students = [] }) => {
   const generateSlipCanvas = async (student) => {
     const slipData = generateSlipData(student);
     const container = createSlipContainer(slipData);
-    
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       const canvas = await html2canvas(container, {
         scale: 2,
         useCORS: true,
@@ -974,9 +1067,9 @@ const Slip = ({ students = [] }) => {
         width: container.offsetWidth,
         height: container.offsetHeight,
         windowWidth: container.offsetWidth,
-        windowHeight: container.offsetHeight
+        windowHeight: container.offsetHeight,
       });
-      
+
       return canvas;
     } finally {
       if (container && container.parentNode) {
@@ -990,40 +1083,48 @@ const Slip = ({ students = [] }) => {
     if (!student) return;
     setLoading(true);
     setCurrentStudent(student);
-    
+
     try {
       const canvas = await generateSlipCanvas(student);
-      
+
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4'
+        format: 'a4',
       });
-      
+
       const pageWidth = 210;
       const pageHeight = 297;
       const slipWidth = 95;
       const slipHeight = 185;
-      
+
       const x = (pageWidth - slipWidth) / 2;
       const y = (pageHeight - slipHeight) / 2;
-      
+
       const imgData = canvas.toDataURL('image/png', 1.0);
-      
+
       pdf.addImage(imgData, 'PNG', x, y, slipWidth, slipHeight, '', 'MEDIUM');
-      
+
       pdf.setFontSize(10);
-      pdf.setFont("helvetica", "bold");
+      pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(33, 150, 243);
-      pdf.text(`${academyConfig.name || "Academy"} Receipt`, pageWidth / 2, 20, { align: 'center' });
-      
+      pdf.text(`${academyConfig.name || 'Academy'} Receipt`, pageWidth / 2, 20, {
+        align: 'center',
+      });
+
       pdf.setFontSize(9);
       pdf.setTextColor(100, 100, 100);
       pdf.text(`Student: ${student.name}`, pageWidth / 2, 25, { align: 'center' });
-      pdf.text(`ID: ${student.studentId} | Course: ${student.course} | Admission: ${formatAdmissionDate(student.admissionDate || student.admission_date)}`, pageWidth / 2, 29, { align: 'center' });
-      
-      pdf.save(`${academyConfig.name || 'Academy'}-Receipt-${student.name}-${student.studentId}.pdf`);
-      
+      pdf.text(
+        `ID: ${student.studentId} | Course: ${student.course} | Admission: ${formatAdmissionDate(student.admissionDate || student.admission_date)}`,
+        pageWidth / 2,
+        29,
+        { align: 'center' },
+      );
+
+      pdf.save(
+        `${academyConfig.name || 'Academy'}-Receipt-${student.name}-${student.studentId}.pdf`,
+      );
     } catch (error) {
       console.error('PDF Error:', error);
       alert('Error generating PDF. Please try again.');
@@ -1041,99 +1142,110 @@ const Slip = ({ students = [] }) => {
     }
 
     setDownloadingAll(true);
-    
+
     try {
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
-        format: 'a4'
+        format: 'a4',
       });
-      
+
       const pageWidth = 297;
       const pageHeight = 210;
-      
+
       const columns = 3;
       const slipWidth = 95;
       const slipHeight = 185;
-      
+
       const startX = 3;
       const startY = 10;
       const gapX = 3;
-      
+
       const totalStudents = activeStudents.length;
       const slipsPerPage = columns;
       const totalPages = Math.ceil(totalStudents / slipsPerPage);
-      
+
       let slipIndex = 0;
-      
+
       for (let page = 0; page < totalPages; page++) {
         if (page > 0) {
           pdf.addPage();
         }
-        
+
         // Header for each page
         pdf.setFontSize(16);
-        pdf.setFont("helvetica", "bold");
+        pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(33, 150, 243);
-        pdf.text(academyConfig.name || "ACADEMY", pageWidth / 2, 8, { align: 'center' });
-        
+        pdf.text(academyConfig.name || 'ACADEMY', pageWidth / 2, 8, { align: 'center' });
+
         pdf.setFontSize(10);
         pdf.setTextColor(100, 100, 100);
-        pdf.text("Fee Receipts - All Active Students", pageWidth / 2, 12, { align: 'center' });
-        
+        pdf.text('Fee Receipts - All Active Students', pageWidth / 2, 12, { align: 'center' });
+
         pdf.setFontSize(8);
         pdf.text(`Page ${page + 1} of ${totalPages}`, pageWidth / 2, 16, { align: 'center' });
-        
+
         for (let col = 0; col < columns && slipIndex < totalStudents; col++) {
-          const x = startX + (col * (slipWidth + gapX));
+          const x = startX + col * (slipWidth + gapX);
           const y = startY + 8;
-          
+
           const student = activeStudents[slipIndex];
-          
+
           try {
             const canvas = await generateSlipCanvas(student);
             const imgData = canvas.toDataURL('image/png', 1.0);
-            
+
             pdf.addImage(imgData, 'PNG', x, y, slipWidth, slipHeight, '', 'MEDIUM');
-            
+
             // Add small footer below each slip
             pdf.setFontSize(6);
-            pdf.setFont("helvetica", "normal");
+            pdf.setFont('helvetica', 'normal');
             pdf.setTextColor(100, 100, 100);
-            
-            const displayName = student.name.length > 20 ? 
-              student.name.substring(0, 20) + "..." : student.name;
-            
-            pdf.text(displayName, x + slipWidth/2, y + slipHeight + 2, { 
-              align: 'center', 
-              maxWidth: slipWidth - 2 
+
+            const displayName =
+              student.name.length > 20 ? student.name.substring(0, 20) + '...' : student.name;
+
+            pdf.text(displayName, x + slipWidth / 2, y + slipHeight + 2, {
+              align: 'center',
+              maxWidth: slipWidth - 2,
             });
-            
+
             pdf.setFontSize(5);
             const admissionDate = student.admissionDate || student.admission_date;
-            pdf.text(`ID: ${student.studentId} | Admission: ${formatAdmissionDate(admissionDate).substring(0, 15)}`, x + slipWidth/2, y + slipHeight + 4, { 
-              align: 'center', 
-              maxWidth: slipWidth - 2 
-            });
-            
+            pdf.text(
+              `ID: ${student.studentId} | Admission: ${formatAdmissionDate(admissionDate).substring(0, 15)}`,
+              x + slipWidth / 2,
+              y + slipHeight + 4,
+              {
+                align: 'center',
+                maxWidth: slipWidth - 2,
+              },
+            );
+
             slipIndex++;
-            
           } catch (error) {
             console.error(`Error generating slip for ${student.name}:`, error);
             slipIndex++;
           }
         }
-        
+
         // Page footer
         pdf.setFontSize(7);
         pdf.setTextColor(150, 150, 150);
-        pdf.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().getHours().toString().padStart(2, '0')}:${new Date().getMinutes().toString().padStart(2, '0')}`, 5, pageHeight - 5);
-        pdf.text(`Students: ${Math.min(slipIndex, totalStudents)}/${totalStudents}`, pageWidth - 15, pageHeight - 5);
+        pdf.text(
+          `Generated on ${new Date().toLocaleDateString()} at ${new Date().getHours().toString().padStart(2, '0')}:${new Date().getMinutes().toString().padStart(2, '0')}`,
+          5,
+          pageHeight - 5,
+        );
+        pdf.text(
+          `Students: ${Math.min(slipIndex, totalStudents)}/${totalStudents}`,
+          pageWidth - 15,
+          pageHeight - 5,
+        );
       }
-      
+
       const fileName = `${academyConfig.name || 'Academy'}-All-Receipts-${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
-      
     } catch (error) {
       console.error('PDF Error:', error);
       alert('Error generating PDF. Please try again.');
@@ -1147,12 +1259,12 @@ const Slip = ({ students = [] }) => {
     if (!student) return;
     setPrinting(true);
     setCurrentStudent(student);
-    
+
     try {
       const slipData = generateSlipData(student);
-      
+
       const printWindow = window.open('', '_blank', 'width=900,height=800');
-      
+
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -1164,18 +1276,18 @@ const Slip = ({ students = [] }) => {
                 size: A4 portrait;
                 margin: 0;
               }
-              
+
               body {
                 margin: 0;
                 padding: 0;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
               }
-              
+
               .no-print {
                 display: none !important;
               }
-              
+
               .print-container {
                 display: flex;
                 justify-content: center;
@@ -1183,14 +1295,14 @@ const Slip = ({ students = [] }) => {
                 min-height: 100vh;
               }
             }
-            
+
             * {
               margin: 0;
               padding: 0;
               box-sizing: border-box;
               font-family: Arial, sans-serif;
             }
-            
+
             body {
               display: flex;
               justify-content: center;
@@ -1199,7 +1311,7 @@ const Slip = ({ students = [] }) => {
               padding: 10mm;
               background: #f5f5f5;
             }
-            
+
             .print-controls {
               position: fixed;
               top: 10px;
@@ -1213,7 +1325,7 @@ const Slip = ({ students = [] }) => {
               display: flex;
               gap: 10px;
             }
-            
+
             .print-btn {
               padding: 8px 16px;
               border: none;
@@ -1222,12 +1334,12 @@ const Slip = ({ students = [] }) => {
               font-weight: bold;
               font-size: 12px;
             }
-            
+
             .print-btn.print {
               background: #4CAF50;
               color: white;
             }
-            
+
             .print-btn.close {
               background: #f44336;
               color: white;
@@ -1239,16 +1351,16 @@ const Slip = ({ students = [] }) => {
             <button onclick="window.print()" class="print-btn print">🖨️ Print Receipt</button>
             <button onclick="window.close()" class="print-btn close">✕ Close</button>
           </div>
-          
+
           <div class="print-container">
             ${generateSlipHTML(slipData)}
           </div>
-          
+
           <script>
             setTimeout(() => {
               window.print();
             }, 500);
-            
+
             window.onafterprint = () => {
               setTimeout(() => window.close(), 500);
             };
@@ -1256,9 +1368,8 @@ const Slip = ({ students = [] }) => {
         </body>
         </html>
       `);
-      
+
       printWindow.document.close();
-      
     } catch (error) {
       console.error('Print Error:', error);
       setPrinting(false);
@@ -1269,27 +1380,33 @@ const Slip = ({ students = [] }) => {
   // Prepare WhatsApp sharing
   const prepareWhatsAppShare = async (student) => {
     if (!student) return;
-    
+
     setSharing(true);
     setCurrentStudent(student);
-    
+
     try {
       const canvas = await generateSlipCanvas(student);
       const imageData = canvas.toDataURL('image/png');
-      
+
       const slipData = generateSlipData(student);
-      
+
       // Create installment months text
-      const installmentMonthsText = slipData.installments.slice(0, 3).map(inst => 
-        `• ${inst.monthName} ${inst.year}: ${slipData.currency} ${formatCurrency(inst.amount)}`
-      ).join('\n');
-      
+      const installmentMonthsText = slipData.installments
+        .slice(0, 3)
+        .map(
+          (inst) =>
+            `• ${inst.monthName} ${inst.year}: ${slipData.currency} ${formatCurrency(inst.amount)}`,
+        )
+        .join('\n');
+
       // Create extra fees text
-      const extraFeesText = slipData.extraFees.length > 0 ? 
-        `\n💸 *Extra Fees:*\n${slipData.extraFees.map(fee => 
-          `• ${fee.name}: ${slipData.currency} ${formatCurrency(fee.amount)}`
-        ).join('\n')}` : '';
-      
+      const extraFeesText =
+        slipData.extraFees.length > 0
+          ? `\n💸 *Extra Fees:*\n${slipData.extraFees
+              .map((fee) => `• ${fee.name}: ${slipData.currency} ${formatCurrency(fee.amount)}`)
+              .join('\n')}`
+          : '';
+
       const message = `*${slipData.academyName} Fee Receipt*
 
 👨‍🎓 *Student Details:*
@@ -1315,11 +1432,10 @@ ${extraFeesText}
 📅 Date: ${slipData.issueDate}
 📍 ${slipData.academyAddress}
 📞 ${slipData.academyPhone}`;
-      
+
       setWhatsAppImage(imageData);
       setWhatsAppMessage(message);
       setShowWhatsAppPopup(true);
-      
     } catch (error) {
       console.error('WhatsApp Share Error:', error);
       alert('Error generating receipt for WhatsApp.');
@@ -1332,13 +1448,13 @@ ${extraFeesText}
   const directWhatsAppShare = () => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const encodedMessage = encodeURIComponent(whatsAppMessage);
-    
+
     if (isMobile) {
       window.open(`whatsapp://send?text=${encodedMessage}`, '_blank');
     } else {
       window.open(`https://web.whatsapp.com/send?text=${encodedMessage}`, '_blank');
     }
-    
+
     setTimeout(() => setShowWhatsAppPopup(false), 1000);
   };
 
@@ -1355,47 +1471,34 @@ ${extraFeesText}
   // WhatsApp Popup Component
   const WhatsAppPopup = () => {
     if (!showWhatsAppPopup) return null;
-    
+
     return (
       <div style={styles.popupOverlay}>
         <div style={styles.popupContainer}>
           <div style={styles.popupHeader}>
             <h3 style={styles.popupTitle}>📱 Share Receipt</h3>
-            <button 
-              onClick={() => setShowWhatsAppPopup(false)}
-              style={styles.closeBtn}
-            >
+            <button onClick={() => setShowWhatsAppPopup(false)} style={styles.closeBtn}>
               ✕
             </button>
           </div>
-          
+
           <div style={styles.popupContent}>
             <div style={styles.imagePreview}>
-              <img 
-                src={whatsAppImage} 
-                alt="Receipt" 
-                style={styles.previewImage}
-              />
+              <img src={whatsAppImage} alt="Receipt" style={styles.previewImage} />
             </div>
-            
+
             <div style={styles.shareOptions}>
-              <button
-                onClick={directWhatsAppShare}
-                style={styles.whatsappBtn}
-              >
+              <button onClick={directWhatsAppShare} style={styles.whatsappBtn}>
                 <FaWhatsapp size={16} />
                 <span>Share on WhatsApp</span>
               </button>
-              
+
               <div style={styles.buttonGroup}>
-                <button
-                  onClick={() => downloadWhatsAppImage()}
-                  style={styles.downloadBtn}
-                >
+                <button onClick={() => downloadWhatsAppImage()} style={styles.downloadBtn}>
                   <FaDownload size={14} />
                   <span>Download Image</span>
                 </button>
-                
+
                 <button
                   onClick={() => currentStudent && generatePDF(currentStudent)}
                   style={styles.pdfBtn}
@@ -1417,7 +1520,7 @@ ${extraFeesText}
     const isProcessing = loading && currentStudent?.studentId === student.studentId;
     const isPrinting = printing && currentStudent?.studentId === student.studentId;
     const isSharing = sharing && currentStudent?.studentId === student.studentId;
-    
+
     return (
       <div style={styles.card}>
         <div style={styles.cardHeader}>
@@ -1427,7 +1530,7 @@ ${extraFeesText}
           <div style={styles.studentInfo}>
             <div style={styles.studentName}>
               {student.name}
-              <button 
+              <button
                 onClick={() => copyStudentId(student.studentId)}
                 style={styles.copyButton}
                 title="Copy Student ID"
@@ -1446,14 +1549,14 @@ ${extraFeesText}
             </div>
             {/* Admission Date Display */}
             <div style={styles.admissionDateRow}>
-              <FaCalendarDay size={10} style={{color: '#0369a1'}} />
+              <FaCalendarDay size={10} style={{ color: '#0369a1' }} />
               <span style={styles.admissionDateText}>
                 Admission: {formatAdmissionDate(student.admissionDate || student.admission_date)}
               </span>
             </div>
           </div>
         </div>
-        
+
         <div style={styles.quickInfo}>
           <div style={styles.infoRow}>
             <span style={styles.infoLabel}>Father:</span>
@@ -1461,45 +1564,47 @@ ${extraFeesText}
           </div>
           <div style={styles.infoRow}>
             <span style={styles.infoLabel}>Total Amount:</span>
-            <span style={{
-              color: '#1e293b',
-              fontWeight: 'bold',
-              fontSize: '13px'
-            }}>
+            <span
+              style={{
+                color: '#1e293b',
+                fontWeight: 'bold',
+                fontSize: '13px',
+              }}
+            >
               <FaRupeeSign size={10} /> {formatCurrency(slipData.totalFee)}
             </span>
           </div>
         </div>
-        
+
         {/* Fee Summary in Card */}
         <div style={styles.feeSummaryCard}>
           <div style={styles.feeSummaryTitle}>
             <FaMoneyBillAlt size={12} style={{ marginRight: '4px' }} />
             Fee Summary
           </div>
-          
+
           {/* Installment Months */}
           <div style={styles.installmentMonths}>
-            {slipData.installments.slice(0, 2).map(inst => (
+            {slipData.installments.slice(0, 2).map((inst) => (
               <div key={inst.month} style={styles.installmentMonthItem}>
-                <div style={styles.monthName}>{inst.monthName} {inst.year}</div>
+                <div style={styles.monthName}>
+                  {inst.monthName} {inst.year}
+                </div>
                 <div style={styles.monthAmount}>
                   <FaRupeeSign size={9} /> {formatCurrency(inst.amount)}
                 </div>
               </div>
             ))}
             {slipData.installments.length > 2 && (
-              <div style={styles.moreMonths}>
-                +{slipData.installments.length - 2} more months
-              </div>
+              <div style={styles.moreMonths}>+{slipData.installments.length - 2} more months</div>
             )}
           </div>
-          
+
           {/* Extra Fees */}
           {slipData.extraFees.length > 0 && (
             <div style={styles.extraFeesCard}>
               <div style={styles.extraFeesTitle}>Extra Fees:</div>
-              {slipData.extraFees.slice(0, 2).map(fee => (
+              {slipData.extraFees.slice(0, 2).map((fee) => (
                 <div key={fee.id} style={styles.extraFeeItem}>
                   <div style={styles.feeName}>{fee.name}</div>
                   <div style={styles.feeAmount}>
@@ -1508,13 +1613,11 @@ ${extraFeesText}
                 </div>
               ))}
               {slipData.extraFees.length > 2 && (
-                <div style={styles.moreFees}>
-                  +{slipData.extraFees.length - 2} more fees
-                </div>
+                <div style={styles.moreFees}>+{slipData.extraFees.length - 2} more fees</div>
               )}
             </div>
           )}
-          
+
           {/* Total Amount */}
           <div style={styles.totalAmountCard}>
             <div style={styles.totalLabel}>Total Amount:</div>
@@ -1522,16 +1625,16 @@ ${extraFeesText}
               <FaRupeeSign size={12} /> {formatCurrency(slipData.totalFee)}
             </div>
           </div>
-          
+
           {/* Total Paid */}
           <div style={styles.totalPaidCard}>
             <div style={styles.totalLabel}>Total Paid:</div>
-            <div style={{...styles.totalAmount, color: '#27ae60'}}>
+            <div style={{ ...styles.totalAmount, color: '#27ae60' }}>
               <FaRupeeSign size={12} /> {formatCurrency(slipData.totalPaid)}
             </div>
           </div>
         </div>
-        
+
         {/* Installment Summary */}
         <div style={styles.installmentSummary}>
           <div style={styles.installmentTitle}>
@@ -1540,7 +1643,7 @@ ${extraFeesText}
           </div>
           <div style={styles.installmentStats}>
             <div style={styles.installmentStat}>
-              <div style={{...styles.statIcon, background: '#e8f5e9'}}>
+              <div style={{ ...styles.statIcon, background: '#e8f5e9' }}>
                 <FaCheck color="#1b5e20" size={10} />
               </div>
               <div>
@@ -1549,7 +1652,7 @@ ${extraFeesText}
               </div>
             </div>
             <div style={styles.installmentStat}>
-              <div style={{...styles.statIcon, background: '#ffebee'}}>
+              <div style={{ ...styles.statIcon, background: '#ffebee' }}>
                 <FaExclamationTriangle color="#c62828" size={10} />
               </div>
               <div>
@@ -1558,7 +1661,7 @@ ${extraFeesText}
               </div>
             </div>
             <div style={styles.installmentStat}>
-              <div style={{...styles.statIcon, background: '#fff3e0'}}>
+              <div style={{ ...styles.statIcon, background: '#fff3e0' }}>
                 <FaClock color="#f57c00" size={10} />
               </div>
               <div>
@@ -1568,7 +1671,7 @@ ${extraFeesText}
             </div>
           </div>
         </div>
-        
+
         <div style={styles.actionButtons}>
           <button
             onClick={() => generatePDF(student)}
@@ -1576,46 +1679,36 @@ ${extraFeesText}
             style={isProcessing ? styles.btnProcessing : styles.btnPdf}
             title="Download PDF"
           >
-            {isProcessing ? (
-              <span style={styles.spinner}>⏳</span>
-            ) : (
-              <FaFilePdf size={14} />
-            )}
+            {isProcessing ? <span style={styles.spinner}>⏳</span> : <FaFilePdf size={14} />}
             <span style={styles.btnText}>PDF</span>
           </button>
-          
+
           <button
             onClick={() => printSlip(student)}
             disabled={isProcessing || isPrinting || isSharing || downloadingAll}
             style={isPrinting ? styles.btnProcessing : styles.btnPrint}
             title="Print"
           >
-            {isPrinting ? (
-              <span style={styles.spinner}>⏳</span>
-            ) : (
-              <FaPrint size={14} />
-            )}
+            {isPrinting ? <span style={styles.spinner}>⏳</span> : <FaPrint size={14} />}
             <span style={styles.btnText}>Print</span>
           </button>
-          
+
           <button
             onClick={() => prepareWhatsAppShare(student)}
             disabled={isProcessing || isPrinting || isSharing || downloadingAll}
             style={isSharing ? styles.btnProcessing : styles.btnWhatsapp}
             title="Share on WhatsApp"
           >
-            {isSharing ? (
-              <span style={styles.spinner}>⏳</span>
-            ) : (
-              <FaWhatsapp size={14} />
-            )}
+            {isSharing ? <span style={styles.spinner}>⏳</span> : <FaWhatsapp size={14} />}
             <span style={styles.btnText}>Share</span>
           </button>
         </div>
-        
+
         <div style={styles.pdfInfo}>
           <span style={styles.infoIcon}>📄</span>
-          <span style={styles.infoText}>Student Copy (Yellow) + Office Copy (White) | New Fee Summary</span>
+          <span style={styles.infoText}>
+            Student Copy (Yellow) + Office Copy (White) | New Fee Summary
+          </span>
         </div>
       </div>
     );
@@ -1624,7 +1717,7 @@ ${extraFeesText}
   return (
     <div style={styles.container}>
       <WhatsAppPopup />
-      
+
       <div style={styles.header}>
         <div style={styles.headerLeft}>
           <h1 style={styles.title}>
@@ -1632,7 +1725,8 @@ ${extraFeesText}
             Fee Receipt Generator
           </h1>
           <div style={styles.subtitle}>
-            Student Copy (Yellow) + Office Copy (White) | New Fee Summary with Installment Months First
+            Student Copy (Yellow) + Office Copy (White) | New Fee Summary with Installment Months
+            First
           </div>
         </div>
         <div style={styles.headerRight}>
@@ -1649,38 +1743,38 @@ ${extraFeesText}
               </span>
             </button>
           )}
-          <div style={styles.countBadge}>
-            {activeStudents.length} Active Students
-          </div>
+          <div style={styles.countBadge}>{activeStudents.length} Active Students</div>
         </div>
       </div>
-      
+
       <div style={styles.infoCards}>
         <div style={styles.infoCard}>
-          <div style={{...styles.infoCardIcon, background: '#e0f2fe', color: '#0369a1'}}>📄</div>
+          <div style={{ ...styles.infoCardIcon, background: '#e0f2fe', color: '#0369a1' }}>📄</div>
           <div style={styles.infoCardContent}>
             <div style={styles.infoCardTitle}>New Fee Summary</div>
-            <div style={styles.infoCardText}>Installment months first, then extra fees, then total amount</div>
+            <div style={styles.infoCardText}>
+              Installment months first, then extra fees, then total amount
+            </div>
           </div>
         </div>
-        
+
         <div style={styles.infoCard}>
-          <div style={{...styles.infoCardIcon, background: '#f0f9ff', color: '#0c4a6e'}}>📅</div>
+          <div style={{ ...styles.infoCardIcon, background: '#f0f9ff', color: '#0c4a6e' }}>📅</div>
           <div style={styles.infoCardContent}>
             <div style={styles.infoCardTitle}>Admission Date</div>
             <div style={styles.infoCardText}>Admission date included in receipts</div>
           </div>
         </div>
-        
+
         <div style={styles.infoCard}>
-          <div style={{...styles.infoCardIcon, background: '#f0fdf4', color: '#166534'}}>📱</div>
+          <div style={{ ...styles.infoCardIcon, background: '#f0fdf4', color: '#166534' }}>📱</div>
           <div style={styles.infoCardContent}>
             <div style={styles.infoCardTitle}>Easy Sharing</div>
             <div style={styles.infoCardText}>PDF, Print, WhatsApp sharing options</div>
           </div>
         </div>
       </div>
-      
+
       <div style={styles.content}>
         {activeStudents.length === 0 ? (
           <div style={styles.emptyState}>
@@ -1955,7 +2049,7 @@ const styles = {
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  
+
   // New Fee Summary Card Styles
   feeSummaryCard: {
     marginBottom: '12px',
@@ -2079,7 +2173,7 @@ const styles = {
     alignItems: 'center',
     gap: '3px',
   },
-  
+
   installmentSummary: {
     marginBottom: '15px',
     padding: '10px',
@@ -2241,7 +2335,7 @@ const styles = {
     fontSize: '14px',
     color: '#94a3b8',
   },
-  
+
   // WhatsApp Popup Styles
   popupOverlay: {
     position: 'fixed',
@@ -2375,92 +2469,92 @@ styleSheet.textContent = `
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
-  
+
   * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
   }
-  
+
   body {
     font-family: 'Inter', sans-serif;
   }
-  
+
   button {
     font-family: inherit;
     outline: none;
   }
-  
+
   button:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 3px 8px rgba(0,0,0,0.15);
   }
-  
+
   button:active:not(:disabled) {
     transform: translateY(0);
   }
-  
+
   .card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   }
-  
+
   .infoCard:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   }
-  
+
   @media (max-width: 768px) {
     .studentsGrid {
       grid-template-columns: 1fr !important;
     }
-    
+
     .header {
       flex-direction: column;
       align-items: stretch;
     }
-    
+
     .headerRight {
       flex-direction: column;
       align-items: stretch;
     }
-    
+
     .infoCards {
       grid-template-columns: 1fr;
     }
-    
+
     .popupContainer {
       margin: 10px;
       max-height: 70vh;
     }
-    
+
     .downloadAllBtn, .downloadAllBtnProcessing {
       width: 100%;
     }
-    
+
     .countBadge {
       width: 100%;
       text-align: center;
     }
-    
+
     .buttonGroup {
       flex-direction: column;
     }
   }
-  
+
   @media print {
     @page {
       margin: 0;
     }
-    
+
     body * {
       visibility: hidden;
     }
-    
+
     .print-container, .print-container * {
       visibility: visible;
     }
-    
+
     .print-container {
       position: absolute;
       left: 0;
