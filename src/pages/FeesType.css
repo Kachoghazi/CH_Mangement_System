@@ -1,0 +1,231 @@
+/* ================= PAGE ================= */
+.fees-type-page {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background: #f5f6fa;
+}
+
+.page-header h1 {
+  margin-bottom: 5px;
+}
+
+.page-header p {
+  color: #666;
+}
+
+/* ================= SECTIONS ================= */
+.sections-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.section-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.section-title {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.section-icon {
+  font-size: 24px;
+  color: #4b7bec;
+}
+
+/* ================= BUTTONS ================= */
+button {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.add-btn {
+  background: #4b7bec;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.add-btn:hover {
+  background: #3867d6;
+}
+
+.card-actions button {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  margin-left: 8px;
+}
+
+/* ================= CARDS ================= */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 15px;
+}
+
+.fee-card {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fee-badge {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.course-badge {
+  background: #e3f2fd;
+  color: #1e88e5;
+}
+
+.general-badge {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.warning-badge {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.card-content h3 {
+  margin: 10px 0;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin: 4px 0;
+}
+
+.amount {
+  font-weight: bold;
+}
+
+/* ================= EMPTY STATE ================= */
+.empty-state {
+  text-align: center;
+  padding: 30px;
+  color: #777;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #4b7bec;
+  cursor: pointer;
+}
+
+/* ================= MODAL FIX (MOST IMPORTANT) ================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* 🔥 THIS FIXES YOUR ISSUE */
+.modal {
+  background: #ffffff;
+  width: 420px;
+  max-width: 95%;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+  z-index: 10000;
+  display: block;
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ================= MODAL CONTENT ================= */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.btn-submit {
+  background: #4b7bec;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+}
+
+.btn-cancel {
+  background: #ccc;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 900px) {
+  .sections-container {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,115 @@
+/* Sidebar Container */
+.Sidebar {
+  width: 260px;
+  height: 100vh;
+  background: #343a40;
+  color: #fff;
+  padding: 15px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+  overflow-y: auto;
+  border: none; /* Kisi bhi default border ko hatane ke liye */
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #f39c12; /* Accent color - aap isse bhi change kar sakte hain */
+  border-bottom: 1px solid #495057;
+  padding-bottom: 15px;
+}
+
+/* Base Menu Item Styles */
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  margin-bottom: 5px;
+  font-size: 15px;
+  position: relative;
+  /* Green border ya indicator ko remove karne ke liye */
+  border-left: 3px solid transparent; 
+}
+
+/* Active ya Clicked state - Green hatane ke liye sirf Gray background rakha hai */
+.menu-item.active, 
+.menu-item:focus {
+  background: #495057;
+  color: #fff;
+  border-left: 3px solid transparent; /* AdminLTE style green border yahan se hataya gaya hai */
+}
+
+/* Hover effect */
+.menu-item:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Icon alignment */
+.menu-item svg {
+  font-size: 18px;
+  min-width: 20px;
+}
+
+/* Arrow Styling */
+.arrow {
+  margin-left: auto;
+  font-size: 12px;
+  transition: transform 0.3s ease;
+}
+
+.rotate {
+  transform: rotate(180deg);
+}
+
+/* Submenu Styling */
+.submenu {
+  background: #2c3136;
+  margin-top: -5px;
+  margin-bottom: 10px;
+  border-radius: 0 0 6px 6px;
+  padding: 5px 0;
+  animation: slideDown 0.3s ease-out;
+}
+
+.submenu a {
+  display: block;
+  padding: 10px 15px 10px 45px;
+  color: #adb5bd;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.submenu a:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Animation for opening submenu */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scrollbar styling */
+.Sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+.Sidebar::-webkit-scrollbar-thumb {
+  background: #495057;
+  border-radius: 10px;
+}
