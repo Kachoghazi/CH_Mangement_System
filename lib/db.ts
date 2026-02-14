@@ -27,6 +27,7 @@ export async function connectToDatabase() {
       .connect(MONGO_URI, opts)
       .then((mongoose) => {
         cached.conn = mongoose.connection;
+        console.log('MongoDB connected successfully');
       })
       .catch((err) => {
         console.error('Error connecting to MongoDB:', err);

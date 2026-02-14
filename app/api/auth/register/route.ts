@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     if (!fullName || !email || !password) {
       return NextResponse.json({ message: 'All fields are required' }, { status: 400 });
     }
-    connectToDatabase();
+    await connectToDatabase();
     const existingUser = await User.findOne({
       email,
     });
