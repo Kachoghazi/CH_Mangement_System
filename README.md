@@ -38,7 +38,3 @@ If you’d like to contribute:
 * Test your changes before submitting
 
 Feel free to open an issue for bug reports, feature requests, or suggestions.
-
----
-
-If you want, I can also **polish the whole README**, add **badges**, or tailor it for **GitHub open-source style**.
