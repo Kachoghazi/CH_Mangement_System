@@ -1,22 +1,17 @@
 import mongoose, { Document, Model, models } from 'mongoose';
 
-export interface IStudent extends Document {
+export interface ITeacher extends Document {
   _id: mongoose.Types.ObjectId;
   fullName: string;
-  rollNumber: string;
-  email?: string;
+  email: string;
   password: string;
   phone?: string;
-  parentPhone?: string;
+  subjectsTaught: string[];
+  qualifications?: string;
+  experience?: number;
   dateOfBirth?: Date;
   gender?: 'Male' | 'Female' | 'Other';
   address?: string;
-  emergencyContact?: {
-    name: string;
-    phone: string;
-    relationship?: string;
-  };
-  profileImage?: string;
   joiningDate: Date;
   isActive: boolean;
   refreshToken?: string;
@@ -29,13 +24,13 @@ export interface IStudent extends Document {
   updatedAt: Date;
 }
 
-export interface IStudentMethods {
-  softDelete(): Promise<IStudent>;
+export interface ITeacherMethods {
+  softDelete(): Promise<ITeacher>;
 }
 
-export type StudentModel = Model<IStudent, object, IStudentMethods>;
+export type TeacherModel = Model<ITeacher, object, ITeacherMethods>;
 
-const studentSchema = new mongoose.Schema<IStudent, StudentModel, IStudentMethods>(
+const teacherSchema = new mongoose.Schema<ITeacher, TeacherModel, ITeacherMethods>(
   {
     fullName: {
       type: String,
@@ -44,17 +39,10 @@ const studentSchema = new mongoose.Schema<IStudent, StudentModel, IStudentMethod
       minlength: [2, 'Name must be at least 2 characters'],
       maxlength: [100, 'Name cannot exceed 100 characters'],
     },
-    rollNumber: {
-      type: String,
-      required: [true, 'Roll number is required'],
-      unique: true,
-      uppercase: true,
-      trim: true,
-      match: [/^[A-Z0-9-]+$/, 'Roll number can only contain letters, numbers, and hyphens'],
-    },
     email: {
       type: String,
-      sparse: true,
+      required: [true, 'Email is required'],
+      unique: true,
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
@@ -70,10 +58,25 @@ const studentSchema = new mongoose.Schema<IStudent, StudentModel, IStudentMethod
       trim: true,
       match: [/^\+?[\d\s-]{10,15}$/, 'Please provide a valid phone number'],
     },
-    parentPhone: {
+    subjectsTaught: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function (v: string[]) {
+          return v.length <= 20;
+        },
+        message: 'Cannot teach more than 20 subjects',
+      },
+    },
+    qualifications: {
       type: String,
       trim: true,
-      match: [/^\+?[\d\s-]{10,15}$/, 'Please provide a valid phone number'],
+      maxlength: [500, 'Qualifications cannot exceed 500 characters'],
+    },
+    experience: {
+      type: Number,
+      min: [0, 'Experience cannot be negative'],
+      max: [50, 'Experience cannot exceed 50 years'],
     },
     dateOfBirth: {
       type: Date,
@@ -89,14 +92,6 @@ const studentSchema = new mongoose.Schema<IStudent, StudentModel, IStudentMethod
       type: String,
       trim: true,
       maxlength: [300, 'Address cannot exceed 300 characters'],
-    },
-    emergencyContact: {
-      name: { type: String, trim: true },
-      phone: { type: String, trim: true },
-      relationship: { type: String, trim: true },
-    },
-    profileImage: {
-      type: String,
     },
     joiningDate: {
       type: Date,
@@ -137,36 +132,24 @@ const studentSchema = new mongoose.Schema<IStudent, StudentModel, IStudentMethod
   },
 );
 
-studentSchema.index({ rollNumber: 1 }, { unique: true });
-studentSchema.index({ email: 1 }, { sparse: true });
-studentSchema.index({ phone: 1 }, { sparse: true });
-studentSchema.index({ isActive: 1, isDeleted: 1 });
-studentSchema.index({ isDeleted: 1, createdAt: -1 });
-studentSchema.index({ fullName: 'text' });
+teacherSchema.index({ email: 1 }, { unique: true });
+teacherSchema.index({ subjectsTaught: 1 });
+teacherSchema.index({ isActive: 1, isDeleted: 1 });
+teacherSchema.index({ isDeleted: 1, createdAt: -1 });
 
-let rollNumberCounter = 1000;
-
-studentSchema.pre('save', async function () {
-  if (this.isNew && !this.rollNumber) {
-    const year = new Date().getFullYear().toString().slice(-2);
-    rollNumberCounter += 1;
-    this.rollNumber = `STU-${year}-${rollNumberCounter.toString().padStart(4, '0')}`;
-  }
-});
-
-studentSchema.methods.softDelete = async function (): Promise<IStudent> {
+teacherSchema.methods.softDelete = async function (): Promise<ITeacher> {
   this.isDeleted = true;
   this.deletedAt = new Date();
   return this.save();
 };
 
-studentSchema.pre('find', function () {
+teacherSchema.pre('find', function () {
   this.where({ isDeleted: { $ne: true } });
 });
 
-studentSchema.pre('findOne', function () {
+teacherSchema.pre('findOne', function () {
   this.where({ isDeleted: { $ne: true } });
 });
 
-export const Student =
-  models?.Student || mongoose.model<IStudent, StudentModel>('Student', studentSchema);
+export const Teacher =
+  models?.Teacher || mongoose.model<ITeacher, TeacherModel>('Teacher', teacherSchema);

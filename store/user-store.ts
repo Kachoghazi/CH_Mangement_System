@@ -1,6 +1,7 @@
 import { IUser } from '@/models/User';
 import axios from 'axios';
 import { getSession, signIn, signOut } from 'next-auth/react';
+import toast from 'react-hot-toast';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
@@ -32,17 +33,21 @@ export const useUserStore = create<IUserStore>()(
 
         if (response?.error) {
           set(() => ({ status: 'unauthenticated', error: response.error }));
+          toast.error(response.error);
           return;
         }
         const session = await getSession();
         if (session?.user) {
           set(() => ({ user: session.user, status: 'authenticated', error: null }));
+          toast.success('Logged in successfully!');
         } else {
           set(() => ({ status: 'unauthenticated', error: 'Failed to retrieve user session' }));
+          toast.error('Failed to retrieve user session');
         }
       } catch (error) {
         const err = error as Error;
         console.log('Error during login:', err);
+        toast.error(err.message);
         set(() => ({ status: 'error', error: err.message }));
       }
     },
@@ -56,13 +61,16 @@ export const useUserStore = create<IUserStore>()(
         });
         if (response.status !== 201) {
           set(() => ({ status: 'error', error: response.data.message || 'Failed to create user' }));
+          toast.error(response.data.message || 'Failed to create user');
           return;
         }
         set(() => ({ status: 'idle', error: null }));
+        toast.success(response.data.message || 'User created successfully!');
         return response.data;
       } catch (error) {
         const err = error as { response?: { data?: { message?: string } }; message?: string };
         const errorMessage = err.response?.data?.message || err.message || 'Failed to create user';
+        toast.error(errorMessage);
         set(() => ({ status: 'error', error: errorMessage }));
       }
     },
@@ -71,8 +79,11 @@ export const useUserStore = create<IUserStore>()(
         const response = await signOut({ redirect: true, callbackUrl: '/login' });
         if (!response) {
           set(() => ({ status: 'error', error: 'Failed to sign out' }));
+          toast.error('Failed to sign out');
+          return;
         }
         set(() => ({ user: null, status: 'unauthenticated', error: null }));
+        toast.success('Logged out successfully!');
         return response;
       } catch (error) {
         const err = error as Error;

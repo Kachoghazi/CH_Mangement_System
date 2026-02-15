@@ -2,7 +2,7 @@ import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
 const authRoutes = ['/login', '/register'];
-const privateRoutes = ['/dashboard', '/profile', '/settings'];
+const privateRoutes = ['/dashboard', '/profile', '/settings', '/api/student'];
 
 export default withAuth(
   function middleware(req) {

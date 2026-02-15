@@ -7,13 +7,12 @@ import toast from 'react-hot-toast';
 import Link from 'next/link';
 
 import { useUserStore } from '@/store/user-store';
-
-type SignupInputs = {
-  fullName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-};
+import z from 'zod';
+import { signUpSchema } from '@/schemas/signUpSchema';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 function SignupPage() {
   const { status, createUser, login } = useUserStore();
@@ -24,75 +23,52 @@ function SignupPage() {
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<SignupInputs>();
+  } = useForm<z.infer<typeof signUpSchema>>({
+    resolver: zodResolver(signUpSchema),
+  });
 
   const password = watch('password');
 
-  const onSubmit: SubmitHandler<SignupInputs> = async (data) => {
-    try {
-      await createUser(data.fullName, data.email, data.password);
-      const { status: currentStatus, error: currentError } = useUserStore.getState();
+  const onSubmit: SubmitHandler<z.infer<typeof signUpSchema>> = async (data) => {
+    await createUser(data.fullName, data.email, data.password);
+    const { status: currentStatus, error: currentError } = useUserStore.getState();
 
-      if (currentStatus === 'error') {
-        toast.error(currentError || 'Failed to create account. Please try again.');
-        return;
-      }
+    if (currentStatus === 'error') {
+      return;
+    }
 
-      // Auto-login after successful registration
-      await login(data.email, data.password, '/');
-      const { status: loginStatus } = useUserStore.getState();
+    // Auto-login after successful registration
+    await login(data.email, data.password, '/');
+    const { status: loginStatus } = useUserStore.getState();
 
-      if (loginStatus === 'authenticated') {
-        toast.success('Account created successfully!');
-        router.push('/');
-      } else {
-        toast.success('Account created! Please login.');
-        router.push('/login');
-      }
-    } catch (error) {
-      const err = error as Error;
-      toast.error(err.message || 'Something went wrong. Please try again');
+    if (loginStatus === 'authenticated') {
+      router.push('/');
+    } else {
+      router.push('/login');
     }
   };
 
   const isLoading = status === 'loading' || isSubmitting;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100 px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Logo/Brand */}
-        <div className="mb-8 text-center">
-          <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
-          <p className="mt-2 text-sm text-gray-600">Join us and start managing your courses</p>
-        </div>
-
-        {/* Form Card */}
-        <div className="rounded-xl bg-white p-8 shadow-lg">
+    <>
+      <div className="overflow-hidden rounded-2xl shadow-md w-full max-w-md bg-gray-900">
+        <h1 className="text-center text-2xl font-bold mb-4 mt-4">Create an account</h1>
+        <div className="p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Full Name */}
             <div>
-              <label htmlFor="fullName" className="mb-1 block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
-              <input
+              <Label htmlFor="fullName" className="mb-1 block text-sm font-medium text-slate-700">
+                Full name
+              </Label>
+              <Input
                 id="fullName"
                 type="text"
                 placeholder="John Doe"
-                className={`w-full rounded-lg border px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-                  errors.fullName
-                    ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 bg-gray-50 focus:border-blue-500'
-                }`}
+                className={`w-full text-sm ${errors.fullName ? 'border-red-300' : ''}`}
                 {...register('fullName', {
                   required: 'Full name is required',
-                  minLength: {
-                    value: 2,
-                    message: 'Name must be at least 2 characters',
-                  },
-                  maxLength: {
-                    value: 50,
-                    message: 'Name must be less than 50 characters',
-                  },
+                  minLength: { value: 2, message: 'Name must be at least 2 characters' },
+                  maxLength: { value: 50, message: 'Name must be less than 50 characters' },
                 })}
               />
               {errors.fullName && (
@@ -109,24 +85,19 @@ function SignupPage() {
               )}
             </div>
 
-            {/* Email */}
             <div>
-              <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
-                Email Address
-              </label>
-              <input
+              <Label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-700">
+                Email address
+              </Label>
+              <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
-                className={`w-full rounded-lg border px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-                  errors.email
-                    ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 bg-gray-50 focus:border-blue-500'
-                }`}
+                className={`w-full text-sm ${errors.email ? 'border-red-300' : ''}`}
                 {...register('email', {
                   required: 'Email is required',
                   pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$/i,
                     message: 'Please enter a valid email address',
                   },
                 })}
@@ -145,26 +116,18 @@ function SignupPage() {
               )}
             </div>
 
-            {/* Password */}
             <div>
-              <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
+              <Label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
                 Password
-              </label>
-              <input
+              </Label>
+              <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                className={`w-full rounded-lg border px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-                  errors.password
-                    ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 bg-gray-50 focus:border-blue-500'
-                }`}
+                className={`w-full text-sm ${errors.password ? 'border-red-300' : ''}`}
                 {...register('password', {
                   required: 'Password is required',
-                  minLength: {
-                    value: 8,
-                    message: 'Password must be at least 8 characters',
-                  },
+                  minLength: { value: 8, message: 'Password must be at least 8 characters' },
                   pattern: {
                     value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
                     message:
@@ -172,7 +135,7 @@ function SignupPage() {
                   },
                 })}
               />
-              {errors.password && (
+              {errors.password ? (
                 <p className="mt-1.5 flex items-center gap-1 text-sm text-red-600">
                   <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                     <path
@@ -183,34 +146,28 @@ function SignupPage() {
                   </svg>
                   {errors.password.message}
                 </p>
-              )}
-              {!errors.password && (
-                <p className="mt-1.5 text-xs text-gray-500">
+              ) : (
+                <p className="mt-1.5 text-xs text-slate-500">
                   Min 8 characters with uppercase, lowercase, and number
                 </p>
               )}
             </div>
 
-            {/* Confirm Password */}
             <div>
-              <label
+              <Label
                 htmlFor="confirmPassword"
-                className="mb-1 block text-sm font-medium text-gray-700"
+                className="mb-1 block text-sm font-medium text-slate-700"
               >
-                Confirm Password
-              </label>
-              <input
+                Confirm password
+              </Label>
+              <Input
                 id="confirmPassword"
                 type="password"
                 placeholder="••••••••"
-                className={`w-full rounded-lg border px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-                  errors.confirmPassword
-                    ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 bg-gray-50 focus:border-blue-500'
-                }`}
+                className={`w-full text-sm ${errors.confirmPassword ? 'border-red-300' : ''}`}
                 {...register('confirmPassword', {
                   required: 'Please confirm your password',
-                  validate: (value) => value === password || 'Passwords do not match',
+                  validate: (value) => value === watch('password') || 'Passwords do not match',
                 })}
               />
               {errors.confirmPassword && (
@@ -227,69 +184,26 @@ function SignupPage() {
               )}
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Creating Account...
-                </span>
-              ) : (
-                'Create Account'
-              )}
-            </button>
+            <Button type="submit" disabled={isLoading} className="w-full">
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </Button>
           </form>
 
-          {/* Divider */}
           <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-gray-200" />
-            <span className="px-4 text-sm text-gray-500">or</span>
-            <div className="flex-1 border-t border-gray-200" />
+            <div className="flex-1 border-t" />
+            <span className="px-4 text-sm text-slate-500">or</span>
+            <div className="flex-1 border-t" />
           </div>
 
-          {/* Login Link */}
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-slate-600">
             Already have an account?{' '}
-            <Link
-              href="/login"
-              className="font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-            >
+            <Link href="/login" className="font-semibold text-primary hover:underline">
               Sign in
             </Link>
           </p>
         </div>
-
-        {/* Footer */}
-        <p className="mt-8 text-center text-xs text-gray-500">
-          By creating an account, you agree to our{' '}
-          <a href="#" className="text-blue-600 hover:underline">
-            Terms of Service
-          </a>{' '}
-          and{' '}
-          <a href="#" className="text-blue-600 hover:underline">
-            Privacy Policy
-          </a>
-        </p>
       </div>
-    </div>
+    </>
   );
 }
 
