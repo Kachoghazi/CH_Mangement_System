@@ -25,8 +25,6 @@ export interface IBatch extends Document {
   description?: string;
   isDeleted: boolean;
   deletedAt?: Date;
-  createdBy?: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -114,19 +112,9 @@ const batchSchema = new mongoose.Schema<IBatch, BatchModel, IBatchMethods>(
     deletedAt: {
       type: Date,
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
-    },
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
   },
 );
 

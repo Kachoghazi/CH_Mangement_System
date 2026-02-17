@@ -1,12 +1,9 @@
-import mongoose, { Document, Model, models } from 'mongoose';
+import mongoose, { models } from 'mongoose';
 
-export interface IStudent extends Document {
-  _id: mongoose.Types.ObjectId;
-  fullName: string;
+export interface IStudent {
+  _id?: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   rollNumber: string;
-  email?: string;
-  password: string;
-  phone?: string;
   parentPhone?: string;
   dateOfBirth?: Date;
   gender?: 'Male' | 'Female' | 'Other';
@@ -19,30 +16,19 @@ export interface IStudent extends Document {
   profileImage?: string;
   joiningDate: Date;
   isActive: boolean;
-  refreshToken?: string;
-  lastLogin?: Date;
   isDeleted: boolean;
   deletedAt?: Date;
-  createdBy?: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
+  studentAt: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface IStudentMethods {
-  softDelete(): Promise<IStudent>;
-}
-
-export type StudentModel = Model<IStudent, object, IStudentMethods>;
-
-const studentSchema = new mongoose.Schema<IStudent, StudentModel, IStudentMethods>(
+const studentSchema = new mongoose.Schema<IStudent>(
   {
-    fullName: {
-      type: String,
-      required: [true, 'Full name is required'],
-      trim: true,
-      minlength: [2, 'Name must be at least 2 characters'],
-      maxlength: [100, 'Name cannot exceed 100 characters'],
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User ID is required'],
     },
     rollNumber: {
       type: String,
@@ -51,24 +37,6 @@ const studentSchema = new mongoose.Schema<IStudent, StudentModel, IStudentMethod
       uppercase: true,
       trim: true,
       match: [/^[A-Z0-9-]+$/, 'Roll number can only contain letters, numbers, and hyphens'],
-    },
-    email: {
-      type: String,
-      sparse: true,
-      lowercase: true,
-      trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
-    },
-    password: {
-      type: String,
-      required: [true, 'Password is required'],
-      minlength: [8, 'Password must be at least 8 characters'],
-      select: false,
-    },
-    phone: {
-      type: String,
-      trim: true,
-      match: [/^\+?[\d\s-]{10,15}$/, 'Please provide a valid phone number'],
     },
     parentPhone: {
       type: String,
@@ -106,12 +74,10 @@ const studentSchema = new mongoose.Schema<IStudent, StudentModel, IStudentMethod
       type: Boolean,
       default: true,
     },
-    refreshToken: {
-      type: String,
-      select: false,
-    },
-    lastLogin: {
-      type: Date,
+    studentAt: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Institute',
+      required: [true, 'Student must be associated with an institute'],
     },
     isDeleted: {
       type: Boolean,
@@ -121,19 +87,9 @@ const studentSchema = new mongoose.Schema<IStudent, StudentModel, IStudentMethod
     deletedAt: {
       type: Date,
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
-    },
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
   },
 );
 
@@ -159,14 +115,4 @@ studentSchema.methods.softDelete = async function (): Promise<IStudent> {
   this.deletedAt = new Date();
   return this.save();
 };
-
-studentSchema.pre('find', function () {
-  this.where({ isDeleted: { $ne: true } });
-});
-
-studentSchema.pre('findOne', function () {
-  this.where({ isDeleted: { $ne: true } });
-});
-
-export const Student =
-  models?.Student || mongoose.model<IStudent, StudentModel>('Student', studentSchema);
+export const Student = models?.Student || mongoose.model<IStudent>('Student', studentSchema);

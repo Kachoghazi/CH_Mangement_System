@@ -1,11 +1,15 @@
 import { NextResponse, NextRequest } from 'next/server';
-import User from '@/models/User';
+import { User } from '@/models/User';
 import { connectToDatabase } from '@/lib/db';
 export async function POST(request: NextRequest) {
   try {
-    const { fullName, email, password } = await request.json();
-    if (!fullName || !email || !password) {
+    const { fullName, email, password, role } = await request.json();
+
+    if (!fullName || !email || !password || !role) {
       return NextResponse.json({ message: 'All fields are required' }, { status: 400 });
+    }
+    if (role === 'Admin') {
+      return NextResponse.json({ message: 'Admin registration is not allowed' }, { status: 403 });
     }
     await connectToDatabase();
     const existingUser = await User.findOne({
@@ -18,6 +22,7 @@ export async function POST(request: NextRequest) {
       fullName,
       email,
       password,
+      role,
     });
     return NextResponse.json(
       {
@@ -26,6 +31,7 @@ export async function POST(request: NextRequest) {
           id: newUser._id,
           fullName: newUser.fullName,
           email: newUser.email,
+          role: newUser.role,
         },
       },
 

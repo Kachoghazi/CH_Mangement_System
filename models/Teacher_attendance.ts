@@ -4,6 +4,7 @@ export type TeacherAttendanceStatus = 'Present' | 'Absent' | 'Late' | 'OnLeave' 
 
 export interface ITeacherAttendance extends Document {
   _id: mongoose.Types.ObjectId;
+  institute: mongoose.Types.ObjectId;
   teacher: mongoose.Types.ObjectId;
   date: Date;
   status: TeacherAttendanceStatus;
@@ -23,6 +24,12 @@ export type TeacherAttendanceModel = Model<ITeacherAttendance>;
 
 const teacherAttendanceSchema = new mongoose.Schema<ITeacherAttendance, TeacherAttendanceModel>(
   {
+    institute: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Institute',
+      required: [true, 'Institute reference is required'],
+      index: true,
+    },
     teacher: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Teacher',
@@ -93,7 +100,6 @@ teacherAttendanceSchema.pre('save', function (next) {
     const diff = this.checkOutTime.getTime() - this.checkInTime.getTime();
     this.workingHours = Math.round((diff / (1000 * 60 * 60)) * 100) / 100;
   }
-  next();
 });
 
 export const TeacherAttendance =

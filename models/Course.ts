@@ -2,6 +2,7 @@ import mongoose, { Document, Model, models } from 'mongoose';
 
 export interface ICourse extends Document {
   _id: mongoose.Types.ObjectId;
+  institute: mongoose.Types.ObjectId;
   title: string;
   code: string;
   description?: string;
@@ -19,8 +20,6 @@ export interface ICourse extends Document {
   isActive: boolean;
   isDeleted: boolean;
   deletedAt?: Date;
-  createdBy?: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +32,11 @@ export type CourseModel = Model<ICourse, object, ICourseMethods>;
 
 const courseSchema = new mongoose.Schema<ICourse, CourseModel, ICourseMethods>(
   {
+    institute: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Institute',
+      required: [true, 'Institute reference is required'],
+    },
     title: {
       type: String,
       required: [true, 'Course title is required'],
@@ -120,14 +124,6 @@ const courseSchema = new mongoose.Schema<ICourse, CourseModel, ICourseMethods>(
     },
     deletedAt: {
       type: Date,
-    },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
     },
   },
   {

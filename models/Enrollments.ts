@@ -35,8 +35,6 @@ export interface IEnrollment extends Document {
   notes?: string;
   isDeleted: boolean;
   deletedAt?: Date;
-  createdBy?: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -179,14 +177,6 @@ const enrollmentSchema = new mongoose.Schema<IEnrollment, EnrollmentModel, IEnro
     },
     deletedAt: {
       type: Date,
-    },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
     },
   },
   {

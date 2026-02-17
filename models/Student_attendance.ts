@@ -12,6 +12,7 @@ export interface IAttendanceRecord {
 
 export interface IAttendance extends Document {
   _id: mongoose.Types.ObjectId;
+  institute: mongoose.Types.ObjectId;
   batch: mongoose.Types.ObjectId;
   date: Date;
   records: IAttendanceRecord[];
@@ -37,6 +38,12 @@ export type AttendanceModel = Model<IAttendance, object, IAttendanceMethods>;
 
 const attendanceRecordSchema = new mongoose.Schema(
   {
+    institute: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Institute',
+      required: [true, 'Institute reference is required'],
+      index: true,
+    },
     student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Student',

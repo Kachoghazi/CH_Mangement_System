@@ -1,7 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { connectToDatabase } from './db';
-import User from '@/models/User';
+import { User } from '@/models/User';
 import { NextResponse } from 'next/server';
 
 export const authOptions: NextAuthOptions = {
@@ -36,6 +36,7 @@ export const authOptions: NextAuthOptions = {
           return {
             id: user._id.toString(),
             userData: safeData,
+            role: user.role,
           };
         } catch (error) {
           console.error('Auth error:', error);

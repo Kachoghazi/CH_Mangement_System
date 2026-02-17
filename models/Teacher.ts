@@ -1,11 +1,9 @@
 import mongoose, { Document, Model, models } from 'mongoose';
 
-export interface ITeacher extends Document {
-  _id: mongoose.Types.ObjectId;
-  fullName: string;
-  email: string;
-  password: string;
-  phone?: string;
+export interface ITeacher {
+  _id?: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  teacherAt: mongoose.Types.ObjectId;
   subjectsTaught: string[];
   qualifications?: string;
   experience?: number;
@@ -14,49 +12,23 @@ export interface ITeacher extends Document {
   address?: string;
   joiningDate: Date;
   isActive: boolean;
-  refreshToken?: string;
-  lastLogin?: Date;
   isDeleted: boolean;
   deletedAt?: Date;
-  createdBy?: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ITeacherMethods {
-  softDelete(): Promise<ITeacher>;
-}
-
-export type TeacherModel = Model<ITeacher, object, ITeacherMethods>;
-
-const teacherSchema = new mongoose.Schema<ITeacher, TeacherModel, ITeacherMethods>(
+const teacherSchema = new mongoose.Schema<ITeacher>(
   {
-    fullName: {
-      type: String,
-      required: [true, 'Full name is required'],
-      trim: true,
-      minlength: [2, 'Name must be at least 2 characters'],
-      maxlength: [100, 'Name cannot exceed 100 characters'],
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User ID is required'],
     },
-    email: {
-      type: String,
-      required: [true, 'Email is required'],
-      unique: true,
-      lowercase: true,
-      trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
-    },
-    password: {
-      type: String,
-      required: [true, 'Password is required'],
-      minlength: [8, 'Password must be at least 8 characters'],
-      select: false,
-    },
-    phone: {
-      type: String,
-      trim: true,
-      match: [/^\+?[\d\s-]{10,15}$/, 'Please provide a valid phone number'],
+    teacherAt: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Institute',
+      required: [true, 'Teacher must be associated with an institute'],
     },
     subjectsTaught: {
       type: [String],
@@ -101,13 +73,7 @@ const teacherSchema = new mongoose.Schema<ITeacher, TeacherModel, ITeacherMethod
       type: Boolean,
       default: true,
     },
-    refreshToken: {
-      type: String,
-      select: false,
-    },
-    lastLogin: {
-      type: Date,
-    },
+
     isDeleted: {
       type: Boolean,
       default: false,
@@ -116,19 +82,9 @@ const teacherSchema = new mongoose.Schema<ITeacher, TeacherModel, ITeacherMethod
     deletedAt: {
       type: Date,
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
-    },
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
   },
 );
 
@@ -151,5 +107,4 @@ teacherSchema.pre('findOne', function () {
   this.where({ isDeleted: { $ne: true } });
 });
 
-export const Teacher =
-  models?.Teacher || mongoose.model<ITeacher, TeacherModel>('Teacher', teacherSchema);
+export const Teacher = models?.Teacher || mongoose.model<ITeacher>('Teacher', teacherSchema);

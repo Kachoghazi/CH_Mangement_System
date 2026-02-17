@@ -106,11 +106,6 @@ const feeStructureSchema = new mongoose.Schema<
         message: 'Sum of installments must equal total amount',
       },
     },
-    lateFinePerDay: {
-      type: Number,
-      default: 0,
-      min: [0, 'Late fine cannot be negative'],
-    },
     maxLateFine: {
       type: Number,
       min: [0, 'Max late fine cannot be negative'],

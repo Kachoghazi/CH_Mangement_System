@@ -207,7 +207,6 @@ paymentSchema.pre('save', function (next) {
   if (this.isNew && !this.receiptNumber && this.status === 'Paid') {
     this.receiptNumber = this.generateReceiptNumber();
   }
-  next();
 });
 
 export const Payment =
